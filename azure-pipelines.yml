@@ -5,7 +5,7 @@ resources:
 - repo: self
 
 variables:
-  imageRepo: sampleapp
+  imageRepo: indiumpoc
   tag: '$(Build.BuildId)'
 
 stages:
@@ -20,7 +20,7 @@ stages:
     - task: Docker@2
       displayName: Build an image
       inputs:
-        containerRegistry: 'K8SExamplesACR'
+        containerRegistry: 'indiumpoc'
         repository: '$(imageRepo)'
         command: 'buildAndPush'
         Dockerfile: '$(Build.SourcesDirectory)/app/Dockerfile'
@@ -36,13 +36,12 @@ stages:
   displayName: Deploy to Dev
   dependsOn: Build
   variables:
-    acrsecret: k8sexamplesacrauth
-    acrdevurl: 'k8sexamplesacr.azurecr.io'
+    acrsecret: indiumpocauth
+    acrdevurl: 'indiumpoc.azurecr.io'
     replicaNo: 3
   jobs:
   - deployment: Deploy
     displayName: Deploy to AKS
-    environment: 'k8sdev.default'
     pool: 
       vmImage: ubuntu-latest
     strategy:
@@ -57,10 +56,11 @@ stages:
           - task: KubernetesManifest@0
             inputs:
               action: 'createSecret'
+              kubernetesServiceConnection: 'svcaks'
               namespace: 'default'
               secretType: 'dockerRegistry'
               secretName: '$(acrsecret)'
-              dockerRegistryEndpoint: 'K8SExamplesACR'
+              dockerRegistryEndpoint: 'indiumpoc'
           - task: replacetokens@3
             displayName: Replace Tokens
             inputs:
@@ -78,6 +78,7 @@ stages:
           - task: KubernetesManifest@0
             inputs:
               action: 'deploy'
+              kubernetesServiceConnection: 'svcaks'
               namespace: 'default'
               manifests: |
                 $(Pipeline.Workspace)/manifests/deployment.yml
